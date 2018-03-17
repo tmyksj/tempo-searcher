@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+    <title>Tempo Searcher</title>
+    <meta charset="utf-8">
+    <style>
+        .container {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 1rem auto;
+            max-width: 80rem;
+        }
+
+        [class^="input__button"] {
+            border: 0;
+            border-radius: 4rem;
+            font-size: 1.5rem;
+            height: 8rem;
+            margin: 0.5rem;
+            padding: 0;
+            transition: 0.2s;
+            width: 8rem;
+        }
+
+        [class^="input__button"]:active {
+            transition: 0.05s;
+        }
+
+        .input__button--positive {
+            background: #c8e6c9;
+        }
+
+        .input__button--positive:active {
+            background: #66bb6a;
+        }
+
+        .input__button--negative {
+            background: #ffcdd2;
+        }
+
+        .input__button--negative:active {
+            background: #ef5350;
+        }
+
+        .output {
+            flex-basis: 100%;
+        }
+    </style>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            "use strict";
+
+            let dom = {
+                input: {
+                    beat: document.querySelector("[data-input-beat]"),
+                    reset: document.querySelector("[data-input-reset]"),
+                },
+                output: {
+                    chart: document.querySelector("[data-output-chart]"),
+                },
+                root: document,
+            };
+
+            let chart = new Chart(dom.output.chart, {
+                data: {},
+                options: {},
+                type: "line",
+            });
+
+            let chartColor = [
+                "rgb(255, 99, 132)",
+                "rgb(255, 159, 64)",
+                "rgb(255, 205, 86)",
+                "rgb(75, 192, 192)",
+                "rgb(54, 162, 235)",
+                "rgb(153, 102, 255)",
+                "rgb(201, 203, 207)",
+            ];
+
+            let chartXAxisSize = 9;
+            let average = [1, 2, 4, 8, 16, 32, 64];
+
+            let time = [];
+
+            dom.root.addEventListener("keydown", function (event) {
+                if (event.target !== dom.input.beat && event.key === " ") {
+                    update();
+                }
+            });
+
+            dom.input.beat.addEventListener("click", function (event) {
+                update();
+            });
+
+            dom.input.reset.addEventListener("click", function (event) {
+                reset();
+            });
+
+            reset();
+
+            function update() {
+                time.push(Date.now());
+                if (time.length > average[average.length - 1] + 1) {
+                    time.shift();
+                }
+
+                for (let i = 0; i < average.length; i++) {
+                    let bpm = 60000 * average[i] / (time[time.length - 1] - time[time.length - average[i] - 1]);
+                    chart.data.datasets[i].data.push(Number.isNaN(bpm) ? 0 : bpm);
+                    if (chart.data.datasets[i].data.length > chartXAxisSize) {
+                        chart.data.datasets[i].data.shift();
+                    }
+                }
+
+                chart.update();
+            }
+
+            function reset() {
+                chart.data.labels = ["current"];
+                for (let i = 1; i < chartXAxisSize; i++) {
+                    chart.data.labels.unshift(i.toString());
+                }
+
+                chart.data.datasets = [];
+                for (let i = 0; i < average.length; i++) {
+                    chart.data.datasets.push({
+                        borderColor: chartColor[i],
+                        data: [],
+                        fill: false,
+                        label: average[i] + " beats average",
+                    });
+
+                    for (let j = 0; j < chartXAxisSize; j++) {
+                        chart.data.datasets[i].data.push(0);
+                    }
+                }
+
+                chart.update();
+
+                time = [];
+            }
+        });
+    </script>
+</head>
+<body>
+<main class="container">
+    <div class="output">
+        <canvas class="output__chart" data-output-chart></canvas>
+    </div>
+    <div class="input">
+        <button class="input__button--positive" data-input-beat type="button">Beat</button>
+        <button class="input__button--negative" data-input-reset type="button">Reset</button>
+    </div>
+</main>
+</body>
+</html>
